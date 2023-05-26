@@ -44,7 +44,7 @@ export type {
 	ImageQualityPreset,
 	ImageTransform,
 } from '../assets/types';
-export type { SSRManifest } from '../core/app/types';
+export type { SSRBaseManifest } from '../core/app/types';
 export type { AstroCookies } from '../core/cookies';
 
 export interface AstroBuiltinProps {
@@ -733,6 +733,27 @@ export interface AstroUserConfig {
 		 * ```
 		 */
 		serverEntry?: string;
+
+		/**
+		 * @docs
+		 * @name build.mode
+		 * @type {string}
+		 * @default `'server'`
+		 * @description
+		 * Defines how the SSR should be bundled. SSR code for "server"
+		 * will be built in one single file.
+		 *
+		 *
+		 *
+		 * ```js
+		 * {
+		 *   build: {
+		 *     mode: 'server'
+		 *   }
+		 * }
+		 * ```
+		 */
+		mode?: 'server' | 'serverless';
 	};
 
 	/**

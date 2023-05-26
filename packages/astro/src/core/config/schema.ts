@@ -22,6 +22,8 @@ const ASTRO_CONFIG_DEFAULTS: AstroUserConfig & any = {
 		server: './dist/server/',
 		assets: '_astro',
 		serverEntry: 'entry.mjs',
+		serverlessEntryPrefix: 'entry',
+		mode: 'server',
 	},
 	compressHTML: false,
 	server: {
@@ -115,6 +117,11 @@ export const AstroConfigSchema = z.object({
 			assets: z.string().optional().default(ASTRO_CONFIG_DEFAULTS.build.assets),
 			assetsPrefix: z.string().optional(),
 			serverEntry: z.string().optional().default(ASTRO_CONFIG_DEFAULTS.build.serverEntry),
+			serverlessEntryPrefix: z
+				.string()
+				.optional()
+				.default(ASTRO_CONFIG_DEFAULTS.build.serverlessEntryPrefix),
+			mode: z.enum(['server', 'serverless']).optional().default(ASTRO_CONFIG_DEFAULTS.build.server),
 		})
 		.optional()
 		.default({}),
@@ -277,6 +284,11 @@ export function createRelativeSchema(cmd: string, fileProtocolRoot: URL) {
 				assets: z.string().optional().default(ASTRO_CONFIG_DEFAULTS.build.assets),
 				assetsPrefix: z.string().optional(),
 				serverEntry: z.string().optional().default(ASTRO_CONFIG_DEFAULTS.build.serverEntry),
+				serverlessEntryPrefix: z
+					.string()
+					.optional()
+					.default(ASTRO_CONFIG_DEFAULTS.build.serverlessEntryPrefix),
+				mode: z.enum(['server', 'serverless']).optional().default(ASTRO_CONFIG_DEFAULTS.build.mode),
 			})
 			.optional()
 			.default({}),

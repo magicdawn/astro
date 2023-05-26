@@ -3,8 +3,9 @@ import type { SSRResult } from '../../@types/astro';
 import type { PageOptions } from '../../vite-plugin-astro/types';
 import { prependForwardSlash, removeFileExtension } from '../path.js';
 import { viteID } from '../util.js';
-import { ASTRO_PAGE_EXTENSION_POST_PATTERN, ASTRO_PAGE_MODULE_ID } from './plugins/plugin-pages.js';
+import { ASTRO_PAGE_MODULE_ID } from './plugins/plugin-pages.js';
 import type { PageBuildData, StylesheetAsset, ViteID } from './types';
+import { ASTRO_PAGE_EXTENSION_POST_PATTERN } from './plugins/util.js';
 
 export interface BuildInternals {
 	/**
@@ -80,6 +81,7 @@ export interface BuildInternals {
 	staticFiles: Set<string>;
 	// The SSR entry chunk. Kept in internals to share between ssr/client build steps
 	ssrEntryChunk?: Rollup.OutputChunk;
+	ssrServerlessEntryChunks: Map<string, Rollup.OutputChunk>;
 	componentMetadata: SSRResult['componentMetadata'];
 }
 
@@ -110,6 +112,7 @@ export function createBuildInternals(): BuildInternals {
 		discoveredScripts: new Set(),
 		staticFiles: new Set(),
 		componentMetadata: new Map(),
+		ssrServerlessEntryChunks: new Map(),
 	};
 }
 

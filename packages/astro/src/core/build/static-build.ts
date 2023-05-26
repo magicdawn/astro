@@ -24,14 +24,13 @@ import { generatePages } from './generate.js';
 import { trackPageData } from './internal.js';
 import { createPluginContainer, type AstroBuildPluginContainer } from './plugin.js';
 import { registerAllPlugins } from './plugins/index.js';
-import {
-	ASTRO_PAGE_EXTENSION_POST_PATTERN,
-	ASTRO_PAGE_RESOLVED_MODULE_ID,
-} from './plugins/plugin-pages.js';
+import { ASTRO_PAGE_RESOLVED_MODULE_ID } from './plugins/plugin-pages.js';
 import { RESOLVED_RENDERERS_MODULE_ID } from './plugins/plugin-renderers.js';
-import { SSR_VIRTUAL_MODULE_ID } from './plugins/plugin-ssr.js';
+import { RESOLVED_SERVERLESS_MODULE_ID, SSR_VIRTUAL_MODULE_ID } from './plugins/plugin-ssr.js';
 import type { PageBuildData, StaticBuildOptions } from './types';
 import { getTimeStat } from './util.js';
+import { ASTRO_PAGE_EXTENSION_POST_PATTERN } from './plugins/util.js';
+import { extname } from 'node:path';
 
 export async function viteBuild(opts: StaticBuildOptions) {
 	const { allPages, settings } = opts;
@@ -122,14 +121,14 @@ export async function staticBuild(opts: StaticBuildOptions, internals: BuildInte
 		case settings.config.output === 'static': {
 			settings.timer.start('Static generate');
 			await generatePages(opts, internals);
-			await cleanServerOutput(opts);
+			// await cleanServerOutput(opts);
 			settings.timer.end('Static generate');
 			return;
 		}
 		case settings.config.output === 'server' || hybridOutput: {
 			settings.timer.start('Server generate');
 			await generatePages(opts, internals);
-			await cleanStaticOutput(opts, internals);
+			// await cleanStaticOutput(opts, internals);
 			info(opts.logging, null, `\n${bgMagenta(black(' finalizing server assets '))}\n`);
 			await ssrMoveAssets(opts);
 			settings.timer.end('Server generate');
@@ -176,7 +175,12 @@ async function ssrBuild(
 					...viteConfig.build?.rollupOptions?.output,
 					entryFileNames(chunkInfo) {
 						if (chunkInfo.facadeModuleId?.startsWith(ASTRO_PAGE_RESOLVED_MODULE_ID)) {
-							return makeAstroPageEntryPointFileName(chunkInfo.facadeModuleId);
+							return makeAstroPageEntryPointFileName(
+								ASTRO_PAGE_RESOLVED_MODULE_ID,
+								chunkInfo.facadeModuleId
+							);
+						} else if (chunkInfo.facadeModuleId?.startsWith(RESOLVED_SERVERLESS_MODULE_ID)) {
+							return makeServerlessEntryPointFileName(chunkInfo.facadeModuleId, opts);
 						} else if (
 							// checks if the path of the module we have middleware, e.g. middleware.js / middleware/index.js
 							chunkInfo.facadeModuleId?.includes('middleware') &&
@@ -429,18 +433,42 @@ async function ssrMoveAssets(opts: StaticBuildOptions) {
  *
  * 1. We remove the module id prefix, `@astro-page:`
  * 2. We remove `src/`
- * 3. We replace square brackets with underscore, for example `[slug]`
+ * 3. We replace square brackets with underscore, for example `[slug]`. This is needed because rollup also uses
+ * square brackets for name patterns, and this could create conflicts.
  * 4. At last, we replace the extension pattern with a simple dot
  * 5. We append the `.mjs` string, so the file will always be a JS file
  *
  * @param facadeModuleId
  */
-function makeAstroPageEntryPointFileName(facadeModuleId: string) {
+function makeAstroPageEntryPointFileName(prefix: string, facadeModuleId: string) {
 	return `${facadeModuleId
-		.replace(ASTRO_PAGE_RESOLVED_MODULE_ID, '')
+		.replace(prefix, '')
 		.replace('src/', '')
 		.replaceAll('[', '_')
 		.replaceAll(']', '_')
 		// this must be last
 		.replace(ASTRO_PAGE_EXTENSION_POST_PATTERN, '.')}.mjs`;
+}
+
+/**
+ * This function attempts
+ * @param facadeModuleId
+ * @param opts
+ */
+function makeServerlessEntryPointFileName(facadeModuleId: string, opts: StaticBuildOptions) {
+	const filePath = `${makeAstroPageEntryPointFileName(
+		RESOLVED_SERVERLESS_MODULE_ID,
+		facadeModuleId
+	)}`;
+
+	const pathComponents = filePath.split(path.sep);
+	const lastPathComponent = pathComponents.pop();
+	if (lastPathComponent) {
+		const extension = extname(lastPathComponent);
+		if (extension.length > 0) {
+			const newFileName = `${opts.settings.config.build.serverlessEntryPrefix}.${lastPathComponent}`;
+			return [...pathComponents, newFileName].join(path.sep);
+		}
+	}
+	return filePath;
 }

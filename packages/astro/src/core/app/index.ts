@@ -5,8 +5,9 @@ import type {
 	MiddlewareResponseHandler,
 	RouteData,
 	SSRElement,
+	SSRBaseManifest,
 } from '../../@types/astro';
-import type { RouteInfo, SSRManifest as Manifest } from './types';
+import type { RouteInfo, SSRServerlessManifest, SSRServerManifest } from './types';
 
 import mime from 'mime';
 import { attachToResponse, getSetCookiesFromResponse } from '../cookies/index.js';
@@ -40,7 +41,7 @@ export interface MatchOptions {
 
 export class App {
 	#env: Environment;
-	#manifest: Manifest;
+	#manifest: SSRBaseManifest;
 	#manifestData: ManifestData;
 	#routeDataToRouteInfo: Map<RouteData, RouteInfo>;
 	#encoder = new TextEncoder();
@@ -51,7 +52,17 @@ export class App {
 	#base: string;
 	#baseWithoutTrailingSlash: string;
 
-	constructor(manifest: Manifest, streaming = true) {
+	async #retrievePage(routeData: RouteData) {
+		if (isSsrServerManifest(this.#manifest)) {
+			const pageModule = await this.#manifest.pageMap.get(routeData.component)!();
+			return await pageModule.page();
+		} else {
+			const pageModule = await this.#manifest.pageModule;
+			return await pageModule.page();
+		}
+	}
+
+	constructor(manifest: SSRBaseManifest, streaming = true) {
 		this.#manifest = manifest;
 		this.#manifestData = {
 			routes: manifest.routes.map((route) => route.routeData),
@@ -137,8 +148,7 @@ export class App {
 			defaultStatus = 404;
 		}
 
-		let page = await this.#manifest.pageMap.get(routeData.component)!();
-		let mod = await page.page();
+		let mod = await this.#retrievePage(routeData);
 
 		if (routeData.type === 'page') {
 			let response = await this.#renderPage(request, routeData, mod, defaultStatus);
@@ -147,8 +157,7 @@ export class App {
 			if (response.status === 500 || response.status === 404) {
 				const errorPageData = matchRoute('/' + response.status, this.#manifestData);
 				if (errorPageData && errorPageData.route !== routeData.route) {
-					page = await this.#manifest.pageMap.get(errorPageData.component)!();
-					mod = await page.page();
+					mod = await this.#retrievePage(errorPageData);
 					try {
 						let errorResponse = await this.#renderPage(
 							request,
@@ -309,4 +318,8 @@ export class App {
 			return response;
 		}
 	}
+}
+
+function isSsrServerManifest(manifest: any): manifest is SSRServerManifest {
+	return typeof manifest.pageMap !== 'undefined';
 }

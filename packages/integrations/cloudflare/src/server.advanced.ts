@@ -1,4 +1,4 @@
-import type { SSRManifest } from 'astro';
+import type { SSRBaseManifest } from 'astro';
 import { App } from 'astro/app';
 import { getProcessEnvProxy, isNode } from './util.js';
 
@@ -11,7 +11,7 @@ type Env = {
 	name: string;
 };
 
-export function createExports(manifest: SSRManifest) {
+export function createExports(manifest: SSRBaseManifest) {
 	const app = new App(manifest);
 
 	const fetch = async (request: Request, env: Env, context: any) => {
