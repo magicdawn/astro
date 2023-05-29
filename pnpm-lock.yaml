@@ -3362,6 +3362,18 @@ importers:
         specifier: ^10.11.0
         version: 10.13.2
 
+  packages/astro/test/fixtures/ssr-serverless:
+    dependencies:
+      astro:
+        specifier: workspace:*
+        version: link:../../..
+
+  packages/astro/test/fixtures/ssr-serverless-manifest:
+    dependencies:
+      astro:
+        specifier: workspace:*
+        version: link:../../..
+
   packages/astro/test/fixtures/static-build:
     dependencies:
       '@astrojs/preact':
