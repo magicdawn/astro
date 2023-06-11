@@ -14,7 +14,9 @@ import stripAnsi from 'strip-ansi';
 async function getRegistry(): Promise<string> {
 	const packageManager = (await preferredPM(process.cwd()))?.name || 'npm';
 	const { stdout } = await execa(packageManager, ['config', 'get', 'registry']);
-	return stdout || 'https://registry.npmjs.org';
+	let registry = stdout || 'https://registry.npmjs.org';
+	if (registry.endsWith('/')) registry = registry.slice(0, -1) // trim last `/`
+	return registry
 }
 
 let stdout = process.stdout;
